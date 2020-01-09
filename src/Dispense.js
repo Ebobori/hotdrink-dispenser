@@ -2,27 +2,19 @@ import React, { Component } from 'react';
 import Container from 'react-bootstrap/Container';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
-import ToggleButtonGroup from 'react-bootstrap/ToggleButtonGroup';
-import ToggleButton from 'react-bootstrap/ToggleButton';
-import ButtonToolbar from 'react-bootstrap/ButtonToolbar';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import Button from 'react-bootstrap/Button';
 import './style.css';
 import axios from 'axios';
+import Form from 'react-bootstrap/Form'
 
 
 
 
-const products = ['tea', 'coffee', 'milk', 'sugar'];
-const messages = ['Make a selection', 'You have selected a cup of' , 'You can add milk and sugar or continue' , 'with milk', 'with sugar', 'with milk and sugar', ''];
-const messages2 = 'Your _ is getting prepared';
-const messages3 = 'Your _ is ready';
-const machine_id = 123;
+const messagesPassive = ['Make a selection' , 'You can add milk and sugar or continue' , ''];
+const messageDynamicPre=['You have selected a cup of', 'Your', ''];
+const messageDynamicPost=['is getting prepared', 'is ready', 'with milk', 'with sugar', 'with milk and sugar', ''];
 const timestamp = Date.now(); // This would be the timestamp you want to format;
-// const messagebox2;
-
-console.log(new Intl.DateTimeFormat('en-US', {year: 'numeric', month: '2-digit',day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit'}).format(timestamp));
-console.log(timestamp);
 
 
 
@@ -33,17 +25,17 @@ class Dispense extends Component {
         this.handleGoBackVisibility = this.handleToggleVisibility.bind(this);
         this.handleDespensing = this.handleDespensing.bind(this);
         this.handleBackToStart = this.handleBackToStart.bind(this);
-        this.handleChecked = this.handleChecked.bind(this);
         this.handleMaintainanceToggle = this.handleMaintainanceToggle.bind(this);
+        this.handleInputChange = this.handleInputChange.bind(this);
+        this.handleInputChange2 = this.handleInputChange2.bind(this);
+
         this.state = {
 
-          products,
-          stock:'',
-          machine_id,
+          milk: false,
+          sugar:false,
           timestamp,
           temperature: 0,
           screen2visibility: false,
-          //Screen 1 visble 
           Screen2disability: true,
           Screen1Value: '',
           vosibility: true,
@@ -52,50 +44,37 @@ class Dispense extends Component {
           dispensingCompleteScreen:false,
           isChecked: false,
           persons: [],
-          items:[],
+          stocks:[],
           isLoaded:false,
 
           temperatereading:'',
           date: new Date().toDateString(),
           time: new Date().toLocaleTimeString(),
 
-          messages,
-          messages2,
-          messages3,
-          messagebox: messages[0],
+          messagesPassive,
+          messagebox: messagesPassive[0],
           messagebox2: '',
           messagebox3: '',
+          messagebox4: '',
+          messageDynamicPre,
+          messageDynamicPost,
           temps:[],
-
+          lowstocks:[],
+          last30temps:[],
           maintainanceScreen:false
         
 
         }
       }
 
-      getPosts() {
-        axios
-          // This is where the data is hosted
-          .get("http://localhost:4000/temps")
-          // Once we get a response and store data, let's change the loading state
-          .then(response => {
-              console.log(`get ${response}`)
-            this.setState({
-              temps: response.data.temps,
-              isLoading: false
-            });
-          })
-          // If we catch any errors connecting, let's update accordingly
-          .catch(error => this.setState({ error, isLoading: false }));
-      }
+   
 
       componentDidMount() {
 
-        // axios.get(`https://jsonplaceholder.typicode.com/posts`)
         axios.get(`http://localhost:3000/stock`)
         .then(response => {
             console.log(response);
-          this.setState({ items: response.data });
+          this.setState({ stocks: response.data });
         })
        .catch(error =>{
            console.log(error)
@@ -107,6 +86,11 @@ class Dispense extends Component {
         1000
       );
 
+       this.intervalStamp = setInterval(
+        () => this.ticktimestamp(),
+        1000
+      );
+
       this.intervalIDDate = setInterval(
         () => this.daterefresh(),
         1000
@@ -114,19 +98,44 @@ class Dispense extends Component {
 
       this.intervalIDTemp = setInterval(
         () => this.refreshTemp(),
-        60000
+        10000
       );
     
-        fetch('http://localhost:4000/temps')
+        fetch('http://localhost:4000/temp')
         .then(res => res.json())
         .then(json =>{
             this.setState({
                 isLoaded:true,
                 temps:json
             })
-        })
+        }); 
+        
+        
+        fetch('http://localhost:3000/stock?stock_lte=25')
+        .then(res => res.json())
+        .then(json =>{
+            this.setState({
+                isLoaded:true,
+                lowstocks:json
+            })
+        }); 
 
-        this.getPosts();
+  
+        fetch('http://localhost:4000/temp?_limit=30')
+        .then(res => res.json())
+        .then(json =>{
+            this.setState({
+                isLoaded:true,
+                last30temps:json
+            })
+        });
+
+
+        this.intervalSendTemp = setInterval(
+          () => this.postTemp(),
+          60000
+        );
+      
 
       };
 
@@ -136,22 +145,45 @@ class Dispense extends Component {
         clearInterval(this.intervalIDTemp);
       }
 
+      postTemp(){
+        fetch('http://localhost:4000/temp/', {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            timestamp: this.state.timestamp,
+            temp: this.state.temperature,
+          })
+        })
+      }
+
       tick() {
         this.setState({
           time: new Date().toLocaleTimeString()
         });
       }
 
+      ticktimestamp(){
+        this.setState({
+           timestamp: Date.now()
+        });
+      }
+
       daterefresh() {
           this.setState({
              date: new Date().toDateString()
-            // date: new Date().toDateString('en-GB', {
-            //     weekday: 'long',
-            //     day : 'numeric',
-            //     month : 'long',
-            //     year : 'numeric'
-            // }), 
           })
+      }
+
+
+      refreshStock() {
+        this.setState((prevState) => {
+          return {
+            stocks: prevState.count - 1
+          };
+        });
       }
 
       refreshTemp() {
@@ -162,18 +194,18 @@ class Dispense extends Component {
             this.setState((prevState) => {
             return {
                 temperature: highlightedNumber,
-                timestamp:timestamp
+                timestamp:this.state.timestamp
             } ;
             });
             console.log( timestamp );
       }
+
       handleMaintainanceToggle () {
         this.setState((prevState) => {
           return {
             maintainanceScreen: !prevState.maintainanceScreen,
           };
         });
-    }
 
       handleToggleVisibility(e) {
         this.setState((prevState) => {
@@ -186,15 +218,14 @@ class Dispense extends Component {
               Screen2disability: !prevState.screen2visibility,
             };
           });
-        //   console.log(`one cup of ${e.target.value}`); 
           var screen1val  = e.target.value;
           console.log(screen1val);
 
           this.setState((prevState) => {
           return{
             Screen1Value:screen1val,
-            messagebox:this.state.messages[1],
-            messagebox2:this.state.messages[2]
+            messagebox:this.state.messagesPassive[1],
+            messagebox2:this.state.messageDynamicPre[0]
           }
         });
       }
@@ -203,26 +234,23 @@ class Dispense extends Component {
         this.setState((prevState) => {
           return {
             vosibility: !prevState.screen2visibility,
-            messagebox:this.state.messages[0],
-            messagebox2:this.state.messages[7]
 
           };
         });
         this.setState((prevState) => {
             return {
               vosability: !prevState.screen2visibility,
-              messagebox:this.state.messages[0],
-              messagebox2:this.state.messages[7]
 
             };
         });
-        this.setState((prevState) => {
-            return{
-                messagebox:this.state.messages[0],
-                messagebox2:this.state.messages[7]
-            }
-          })
-      }
+        this.setState({           
+             Screen1Value:'nice',
+            messagebox:this.state.messagesPassive[0],
+            messagebox2:this.state.messageDynamicPre[2],
+        });
+
+          
+      }//handleGoBackVisibility
 
       handleDespensing() {
         this.setState((prevState) => {
@@ -253,6 +281,7 @@ class Dispense extends Component {
                     };
                   });
               }, 3000);
+              
       }
 
       handleBackToStart(){
@@ -268,29 +297,52 @@ class Dispense extends Component {
                   });
       }
 
-      handleChecked (e) {  
-        //   var txt;
-       
-        var vall;
-            if (this.state.isChecked) {
-                vall = ''
-        //       txt = 'checked'
-        //       //e.target.value
-            } else {
-                vall = e.target.value
-        //       txt = 'unchecked'
-            }
-        //var vall = e.target.value
-        // this.setState((prevState) => {
-        this.setState({
-            // return{
-                //isChecked: !this.state.isChecked,
-                messagebox3:vall
 
-                // }
-        }); 
-        console.log(this.state.isChecked === true);
+
+      handleInputChange(event) {
+        const target = event.target;
+        const value = target.type === 'checkbox' ? target.checked : target.value;
+        const name = target.name;
+    
+        this.setState({
+          [name]: value
+        });
+        console.log(value);
+        if(value === true){
+          this.setState((prevState) => {
+            return {
+              messagebox3:name
+            }
+          })
+        }else{
+          this.setState({
+            messagebox3:''
+            })
+        }
       }
+      handleInputChange2(event) {
+        const target = event.target;
+        const value = target.type === 'checkbox' ? target.checked : target.value;
+        const name = target.name;
+    
+        this.setState({
+          [name]: value
+        });
+        console.log(value);
+        if(value === true){
+          this.setState((prevState) => {
+            return {
+              messagebox4:name
+            }
+          })
+        }else{
+          this.setState({
+            messagebox4:''
+            })
+        }
+      }
+
+  
 
       ChangeHandler = (e) =>{
           this.setState({[e.target.name]: e.target.value})
@@ -298,38 +350,10 @@ class Dispense extends Component {
 
       SubmitHandler = e => {
           e.preventDefault();
-          console.log(this.state)
-          axios.get(`http://localhost:4000/temps`, this.state)
-          .then(response => {
-            console.log(response);
-            })
-            .catch(error =>{
-            console.log(error)
-            });
-
-      }
+     
     render() {
-        var { items , temps } = this.state;
-        //console.log(items )
-        // if(!isLoaded){
-        //     return <div> is loading ...</div>;
-        // }
-
-
-        // var txt;
-        // if (this.state.isChecked) {
-        //   txt = 'checked'
-        //   //e.target.value
-        // } else {
-        //   txt = 'unchecked'
-        // }
-
-        // console.log(`${txt} ${this.state}`);
-        // console.log(james);
-
-        //var txt2;
-        //this.
-
+        var { lowstocks, last30temps, messagebox } = this.state;
+        
         var {temperatereading } = this.state
         return (
             <div>
@@ -338,50 +362,45 @@ class Dispense extends Component {
                     <Col md={12}>
                     
                     <br/> <br/>
-                    <form onSubmit={this.SubmitHandler}>
+                    <center className="messagebox"> {messagebox}</center>
+                    <br/> <br/>
+
+                    <Form onSubmit={this.SubmitHandler}>
                     {this.state.Screen2disability && (
                         <div>
-                            <Button variant="primary" value="tea" onClick={this.handleToggleVisibility} size="lg" block>Tea</Button>
+                            <Button variant="primary" value="tea" onClick={this.handleToggleVisibility} size="lg" block>Tea </Button>
                             <Button variant="primary" value="coffee" onClick={this.handleToggleVisibility} size="lg" block>Coffee</Button>
                             <br/>
                             <Button variant="primary" value="coffee" onClick={this.handleMaintainanceToggle}>Maintainance</Button>
-                            {/* {
-                            products.length?
-                            products.map( product => <Button variant="primary" size="lg" block key={postMessage.id}></Button>)
-                            } */}
+             
+
+
                         </div>
                     )}          
 
                     {this.state.screen2visibility && (
 
-                        <div>
-                            <ButtonToolbar>
-                            <ToggleButtonGroup type="checkbox" className="sugarmilk" >
-                                <ToggleButton 
-                                    value="with sugar" 
-                                    variant="primary" 
-                                    size="lg" 
-                                    className="sugar" 
-                                    onChange={ this.handleChecked } 
-                                    block
-                                    checked={this.state.isChecked}
-                                    >
-                                        Sugar
-                                    </ToggleButton>
-                                <ToggleButton 
-                                value="with milk" 
-                                variant="primary" 
-                                size="lg" 
-                                className="milk"  
-                                onChange={ this.handleChecked } 
-                                checked={this.state.isChecked}
-                                >
-                                    Milk
-                                    </ToggleButton>
-                                {/* <ToggleButton value={3} variant="primary" size="lg">No Milk or Sugar</ToggleButton> */}
-                            </ToggleButtonGroup>
-                            </ButtonToolbar> 
-                    
+                        <div>                          
+                            <label>
+                            Milk
+                            <input
+                              name="milk"
+                              type="checkbox"
+                              checked={this.state.Milk}
+                              onChange={this.handleInputChange} />
+                          </label>
+
+                          <label>
+                            Sugar
+                            <input
+                              name="sugar"
+                              type="checkbox"
+                              checked={this.state.Sugar}
+                              onChange={this.handleInputChange2} />
+                          </label>
+
+
+
                         </div>
                         )}
 
@@ -406,51 +425,48 @@ class Dispense extends Component {
                         )}
                         
                         <div>
-                            {/* <input 
-                                type="text" 
-                                name="userId" 
-                                value={temperatereading} 
-                                onChange={this.ChangeHandler} 
-                                /> */}
-
-                            {/* <button type="submit">Submit</button> */}
                         </div>
                         <div className="messagebox">
-                        <center>  {this.state.messagebox} {this.state.Screen1Value} {this.state.messagebox3}</center>
+                        <center> {this.state.messagebox2}  {this.state.Screen1Value} {this.state.messagebox3} {this.state.messagebox4}</center>
                         </div>
                         <div>
                         <center> 
-                            {this.state.messagebox2} 
-                            {/* {this.state.Screen1Value} */}
+                            
                         </center> 
                         <center> The water temperature is  <br/>{this.state.temperature} &#8451;</center>
                         <p className="App-clock cent">
                          {this.state.time}  <br/> {this.state.date}
+                         <br/>  
                         </p>
+  
                         </div>
                         {this.state.maintainanceScreen && (
                         <div>
+                            <h3>Products Low on stock</h3>
+                          <ul>
                             
-                            <ul>
-                            
-                                {items.map(item => (
-                                        <li key={item.id}>
-                                        
-                                             product: {item.product} | stock: {item.stock} 
-                                        </li>
-                                ))}
-                            </ul>
+                            {lowstocks.map(lowstock => (
+                                    <li key={lowstock.id}>
+                                    
+                                         product: {lowstock.product} | stock number: {lowstock.stock} 
+                                    </li>
+                            ))}
+                          </ul>
+                          
+                          <ul>
+                            <h3>Last Temparature 30 Readings </h3>
+                            {last30temps.map(last30temp => (
+                                    <li key={last30temp.id}>
+                                    
+                                         Time stap: {last30temp.timestamp} | Temparature: {last30temp.temp} 
+                                         <br/>
+                                    </li>
+                            ))}
+                          </ul>
 
-                            <ul>
-                                {temps.map(temp => (
-                                        <li key={temp.id}>
-                                            time: {temp.timestamp} | temperature: {temp.temp}
-                                        </li>
-                                ))}
-                            </ul>
                         </div>
                         )}
-                        </form>
+                        </Form>
                     </Col>
                     </Row>
                     
