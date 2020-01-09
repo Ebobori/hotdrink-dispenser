@@ -17,7 +17,6 @@ const messageDynamicPost=['is getting prepared', 'is ready', 'with milk', 'with 
 const timestamp = Date.now(); // This would be the timestamp you want to format;
 
 
-
 class Dispense extends Component {
     constructor(props) {
         super(props);
@@ -36,6 +35,7 @@ class Dispense extends Component {
           timestamp,
           temperature: 0,
           screen2visibility: false,
+          //Screen 1 visble 
           Screen2disability: true,
           Screen1Value: '',
           vosibility: true,
@@ -52,6 +52,8 @@ class Dispense extends Component {
           time: new Date().toLocaleTimeString(),
 
           messagesPassive,
+          // messages2,
+          // messages3,
           messagebox: messagesPassive[0],
           messagebox2: '',
           messagebox3: '',
@@ -197,7 +199,6 @@ class Dispense extends Component {
                 timestamp:this.state.timestamp
             } ;
             });
-            console.log( timestamp );
       }
 
       handleMaintainanceToggle () {
@@ -206,6 +207,7 @@ class Dispense extends Component {
             maintainanceScreen: !prevState.maintainanceScreen,
           };
         });
+    }//handleMaintainanceToggle Maintainance button
 
       handleToggleVisibility(e) {
         this.setState((prevState) => {
@@ -218,8 +220,7 @@ class Dispense extends Component {
               Screen2disability: !prevState.screen2visibility,
             };
           });
-          var screen1val  = e.target.value;
-          console.log(screen1val);
+          const screen1val  = e.target.value;
 
           this.setState((prevState) => {
           return{
@@ -228,6 +229,12 @@ class Dispense extends Component {
             messagebox2:this.state.messageDynamicPre[0]
           }
         });
+        this.setState((prevState) => {
+          return {
+            maintainanceScreen: !prevState.maintainanceScreen,
+          };
+        });
+
       }
 
       handleGoBackVisibility() {
@@ -244,7 +251,7 @@ class Dispense extends Component {
             };
         });
         this.setState({           
-             Screen1Value:'nice',
+            //  Screen1Value:'',
             messagebox:this.state.messagesPassive[0],
             messagebox2:this.state.messageDynamicPre[2],
         });
@@ -252,7 +259,7 @@ class Dispense extends Component {
           
       }//handleGoBackVisibility
 
-      handleDespensing() {
+      handleDespensing(e) {
         this.setState((prevState) => {
             return {
               screen2visibility: false,
@@ -281,6 +288,14 @@ class Dispense extends Component {
                     };
                   });
               }, 3000);
+
+              this.setState((prevState) => {
+                return{
+                  messagebox:this.state.messagesPassive[2],
+                  messagebox2:this.state.messageDynamicPre[0]
+                }
+              });
+              
               
       }
 
@@ -298,7 +313,6 @@ class Dispense extends Component {
       }
 
 
-
       handleInputChange(event) {
         const target = event.target;
         const value = target.type === 'checkbox' ? target.checked : target.value;
@@ -308,10 +322,11 @@ class Dispense extends Component {
           [name]: value
         });
         console.log(value);
+        var wit = "w/" + name 
         if(value === true){
           this.setState((prevState) => {
             return {
-              messagebox3:name
+              messagebox3:wit
             }
           })
         }else{
@@ -328,11 +343,12 @@ class Dispense extends Component {
         this.setState({
           [name]: value
         });
-        console.log(value);
+        // console.log(value);
+        var wit = "w/" + name 
         if(value === true){
           this.setState((prevState) => {
             return {
-              messagebox4:name
+              messagebox4:wit
             }
           })
         }else{
@@ -350,10 +366,12 @@ class Dispense extends Component {
 
       SubmitHandler = e => {
           e.preventDefault();
-     
+
+
     render() {
         var { lowstocks, last30temps, messagebox } = this.state;
-        
+
+
         var {temperatereading } = this.state
         return (
             <div>
@@ -372,7 +390,6 @@ class Dispense extends Component {
                             <Button variant="primary" value="coffee" onClick={this.handleToggleVisibility} size="lg" block>Coffee</Button>
                             <br/>
                             <Button variant="primary" value="coffee" onClick={this.handleMaintainanceToggle}>Maintainance</Button>
-             
 
 
                         </div>
@@ -380,24 +397,26 @@ class Dispense extends Component {
 
                     {this.state.screen2visibility && (
 
-                        <div>                          
-                            <label>
-                            Milk
+                        <div>
+                           
+                            
                             <input
+                              id="milk"
                               name="milk"
                               type="checkbox"
                               checked={this.state.Milk}
                               onChange={this.handleInputChange} />
-                          </label>
+                          <label for="milk" className="btn btn-primary btn-block btn-lg sugar">Milk</label>
 
-                          <label>
-                            Sugar
+                         
+                           
                             <input
+                              id="sugar"
                               name="sugar"
                               type="checkbox"
                               checked={this.state.Sugar}
                               onChange={this.handleInputChange2} />
-                          </label>
+                           <label for="sugar" className="btn btn-primary btn-block btn-lg milk"> Sugar</label>
 
 
 
@@ -437,8 +456,11 @@ class Dispense extends Component {
                         <p className="App-clock cent">
                          {this.state.time}  <br/> {this.state.date}
                          <br/>  
+
                         </p>
-  
+
+
+                        <p>these products &#40; {lowstocks.map(lowstock => (<span key={lowstock.id}>{lowstock.product} </span>))} &#41;	 are low </p>
                         </div>
                         {this.state.maintainanceScreen && (
                         <div>
@@ -448,7 +470,7 @@ class Dispense extends Component {
                             {lowstocks.map(lowstock => (
                                     <li key={lowstock.id}>
                                     
-                                         product: {lowstock.product} | stock number: {lowstock.stock} 
+                                         {lowstock.product} | stock left: {lowstock.stock} 
                                     </li>
                             ))}
                           </ul>
@@ -458,12 +480,14 @@ class Dispense extends Component {
                             {last30temps.map(last30temp => (
                                     <li key={last30temp.id}>
                                     
-                                         Time stap: {last30temp.timestamp} | Temparature: {last30temp.temp} 
+                                         Time : {last30temp.timestamp} | Temparature: {last30temp.temp} 
                                          <br/>
                                     </li>
                             ))}
                           </ul>
 
+                            
+                            
                         </div>
                         )}
                         </Form>

@@ -1,3 +1,18 @@
 .sugarmilk{width:100%;}
-.sugar{width: 10%;}
+.sugar,.milk{width: 50%; display: inline-block;}
 .cent{text-align: center;}
+.sugar{margin-top: 0px;}
+
+input[type=checkbox] + label {
+    color: #ccc;
+    /* font-style: italic; */
+  } 
+
+input[type=checkbox]:checked + label {
+    /* color: #f00 !important; */
+    font-style: normal;
+    font-weight: bold;
+    background-color: #0062cc;
+  } 
+
+  input[type=checkbox]{display: none;}
